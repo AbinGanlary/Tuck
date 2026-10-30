@@ -14,7 +14,12 @@ The app itself is where you shape the folders: drag apps into order, set icon si
 
 ## Screenshots
 
-TODO
+<p>
+  <img src="screenshots/folders.png" width="200" alt="Folders screen with one folder">
+  <img src="screenshots/folder-editor.png" width="200" alt="Folder editor with widget size, icon size and spacing, and a live widget preview">
+  <img src="screenshots/add-apps.png" width="200" alt="Add apps sheet with App Store, Installed, Apple and Custom tabs">
+  <img src="screenshots/folder-style.png" width="200" alt="Edit folder sheet with colour, icon style and name toggle">
+</p>
 
 ## Why it isn't on the App Store
 
