@@ -1,0 +1,61 @@
+name: Build iOS app
+
+# Builds an unsigned IPA on a cloud Mac. Run it from Actions → "Build iOS app" → "Run workflow",
+# then sign and install it with Sideloadly.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate the Xcode project
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build (unsigned archive)
+        run: |
+          set -euo pipefail
+          xcodebuild -project Tuck.xcodeproj -scheme Tuck -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            archive
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/Tuck.app"
+          test -d "$APP/PlugIns/TuckWidget.appex"
+          cp -R "$APP" "$RUNNER_TEMP/Tuck.app"
+
+      # An unsigned binary carries no entitlements, and Sideloadly copies entitlements from the
+      # binary. Ad-hoc signing embeds the App Group so the re-signed app and widget still share data.
+      - name: Embed entitlements (ad-hoc)
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/Tuck.app"
+          codesign --force --sign - --entitlements Widget/TuckWidget.entitlements \
+            "$APP/PlugIns/TuckWidget.appex"
+          codesign --force --sign - --entitlements App/Tuck.entitlements "$APP"
+          codesign -d --entitlements - "$APP/PlugIns/TuckWidget.appex"
+          codesign -d --entitlements - "$APP"
+
+      - name: Package the IPA
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/Tuck.app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/Tuck-unsigned.ipa" Payload)
+          ls -lh Tuck-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Tuck-unsigned-macos-26.ipa
+          path: Tuck-unsigned.ipa
+          retention-days: 14

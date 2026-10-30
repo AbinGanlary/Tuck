@@ -1,0 +1,63 @@
+name: Tuck
+options:
+  bundleIdPrefix: com.abin
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    GENERATE_INFOPLIST_FILE: NO
+
+targets:
+  Tuck:
+    type: application
+    platform: iOS
+    sources: [App, Shared]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Tuck
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.abin.tuck
+            CFBundleURLSchemes: [tuck]
+        # canOpenURL only answers for schemes listed here (iOS caps the list at 50)
+        LSApplicationQueriesSchemes: [whatsapp, youtube, instagram]
+    entitlements:
+      path: App/Tuck.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.abin.tuck]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abin.tuck
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: TuckWidget
+
+  TuckWidget:
+    type: app-extension
+    platform: iOS
+    sources: [Widget, Shared]
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Tuck
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/TuckWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.abin.tuck]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.abin.tuck.widget
