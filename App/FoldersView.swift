@@ -250,6 +250,9 @@ struct DiagnosticsView: View {
             Form {
                 Group {
                     Section {
+                        LabeledContent("Version", value: "v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"))
+                    }
+                    Section {
                         TextField("Country code, e.g. in or us", text: $storeCountry)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
