@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import WidgetKit
 
@@ -91,8 +92,9 @@ struct FolderCard: View {
         ZStack(alignment: .top) {
             StitchedPanel(fill: Theme.pocket, cornerRadius: 24)
 
-            UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16, style: .continuous)
-                .fill(folder.background(scheme).opacity(0.9))
+            FolderBackground(folder: folder,
+                             shape: UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16, style: .continuous))
+                .opacity(0.9)
                 .padding(.horizontal, 10)
                 .padding(.top, 10)
                 .frame(height: frontTop + 20)
@@ -145,6 +147,8 @@ struct FolderEditor: View {
     @EnvironmentObject private var model: LibraryModel
     @Environment(\.dismiss) private var dismiss
     @State private var folder: Folder
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoFailure: String?
 
     init(folder: Folder) {
         _folder = State(initialValue: folder)
@@ -167,6 +171,34 @@ struct FolderEditor: View {
                         Text("The first swatch is Auto: light grey in light mode, dark grey in dark mode.")
                     }
                     Section {
+                        if folder.backgroundPhoto != nil {
+                            FolderBackground(folder: folder, shape: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .frame(height: 120)
+                            HStack(spacing: 12) {
+                                Image(systemName: "sun.max").font(.caption)
+                                Slider(value: Binding(get: { folder.backgroundDim ?? Folder.defaultBackgroundDim },
+                                                      set: { folder.backgroundDim = $0 }), in: 0...0.7)
+                                    .accessibilityLabel("Dim photo")
+                                Image(systemName: "moon.fill").font(.caption)
+                            }
+                            .foregroundStyle(Theme.embossSoft)
+                        }
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            Label(folder.backgroundPhoto == nil ? "Choose a photo" : "Choose another photo",
+                                  systemImage: "photo")
+                        }
+                        if folder.backgroundPhoto != nil {
+                            Button("Remove photo", role: .destructive) { folder.backgroundPhoto = nil }
+                        }
+                        if let photoFailure {
+                            Text(photoFailure).font(.footnote).foregroundStyle(.red)
+                        }
+                    } header: {
+                        Text("Background photo")
+                    } footer: {
+                        Text("Fills the widget behind the icons, in place of the colour. Slide right to darken it so the icons stand out.")
+                    }
+                    Section {
                         Picker("Icons", selection: Binding(get: { folder.iconStyle ?? .original },
                                                            set: { folder.iconStyle = $0 })) {
                             ForEach(IconStyle.allCases, id: \.self) { Text($0.rawValue) }
@@ -184,6 +216,16 @@ struct FolderEditor: View {
                 .listRowBackground(Theme.pocket)
             }
             .walletList()
+            .task(id: photoItem) {
+                guard let photoItem else { return }
+                if let data = try? await photoItem.loadTransferable(type: Data.self),
+                   let id = IconCache.saveBackground(data) {
+                    folder.backgroundPhoto = id
+                    photoFailure = nil
+                } else {
+                    photoFailure = "Couldn't use that photo. Try another one."
+                }
+            }
             .navigationTitle(isNew ? "New folder" : "Edit folder")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

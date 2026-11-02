@@ -5,11 +5,13 @@ import UIKit
 /// shares a small JPEG of each icon with the widget through the keychain. The widget never touches
 /// the network: widgets get little memory and time, and downloading there left it stuck loading.
 enum IconCache {
-    private static let side: CGFloat = 120 // pixels: the widget draws icons at about 37 pt × 3
+    // pixels: sharp up to a small widget's ~64 pt icons at 3×, yet 49 of them (plus dark copies)
+    // stay well inside the widget's memory limit
+    private static let side: CGFloat = 192
 
     private static var dir: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("icons", isDirectory: true)
+            .appendingPathComponent("icons-192", isDirectory: true) // new name: older 120 px copies are ignored
     }
 
     /// For the app's screens; downloads when needed. nil means draw the symbol or letter instead.
@@ -32,10 +34,32 @@ enum IconCache {
         }
     }
 
-    // MARK: Photo icons: a square 180 px JPEG kept in the shared keychain
+    // MARK: Photos: icons (square 180 px) and widget backgrounds (up to 900 px), JPEGs in the shared keychain
+
+    private static let photos = NSCache<NSUUID, UIImage>() // a photo never changes under its id
 
     static func photo(_ id: UUID) -> UIImage? {
-        SharedKeychain.read(account: "photo-\(id.uuidString)").flatMap(UIImage.init(data:))
+        if let cached = photos.object(forKey: id as NSUUID) { return cached }
+        guard let image = SharedKeychain.read(account: "photo-\(id.uuidString)").flatMap(UIImage.init(data:))
+        else { return nil }
+        photos.setObject(image, forKey: id as NSUUID)
+        return image
+    }
+
+    /// Shrinks the picked picture so its long side is at most 900 px (a large widget is about
+    /// 1100 × 1150 px, and the widget has little memory) and saves it. nil if it isn't an image.
+    static func saveBackground(_ data: Data) -> UUID? {
+        guard let image = UIImage(data: data) else { return nil }
+        let scale = min(1, 900 / max(image.size.width, image.size.height))
+        let size = CGSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let jpeg = UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.75) { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        let id = UUID()
+        return SharedKeychain.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
     }
 
     /// Crops the picked picture to its centre square, shrinks it and saves it. nil if it isn't an image.
@@ -85,7 +109,7 @@ enum IconCache {
         return small
     }
 
-    private static func sharedAccount(_ url: URL) -> String { "icon-" + key(url) }
+    private static func sharedAccount(_ url: URL) -> String { "icon192-" + key(url) }
 
     /// Stable name for a URL (FNV-1a; String.hashValue changes between launches).
     private static func key(_ url: URL) -> String {

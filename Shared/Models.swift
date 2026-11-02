@@ -17,9 +17,12 @@ struct Folder: Codable, Identifiable, Hashable {
     var iconScale: Double?          // share of the largest icon that fits the grid
     var iconSpacing: Double?        // points between icons (the edge gap follows it)
     var widgetShape: WidgetShape?   // the one size the widget gallery offers; nil = Auto (by app count)
+    var backgroundPhoto: UUID?      // JPEG in keychain "photo-<id>", drawn instead of the colour
+    var backgroundDim: Double?      // black over the photo so icons stand out
 
     static let defaultIconScale = 1.0
     static let defaultIconSpacing = 8.0
+    static let defaultBackgroundDim = 0.25
 
     static func new() -> Folder {
         Folder(id: UUID(), name: "", colorHex: Palette.folderColors[0], showName: false, apps: [],
