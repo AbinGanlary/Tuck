@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// S04: add apps from the App Store, the installed-app check, Apple's built-in apps, or by bundle ID.
+/// S04: add apps from the App Store, the installed-app check, Apple's built-in apps, by bundle ID,
+/// or by LiveContainer launch link.
 struct AddAppView: View {
     enum Source: String, CaseIterable {
         case store = "App Store"
@@ -27,7 +28,7 @@ struct AddAppView: View {
                 case .store: StoreSearchList(folderID: folderID)
                 case .installed: InstalledAppsList(folderID: folderID)
                 case .apple: AppleAppsList(folderID: folderID)
-                case .custom: CustomAppForm(folderID: folderID)
+                case .custom: CustomSourceView(folderID: folderID)
                 }
             }
             .background(Theme.ground.ignoresSafeArea())
@@ -56,7 +57,7 @@ private struct PickRow: View {
                     Text(subtitle).font(.caption).foregroundStyle(Theme.embossSoft).lineLimit(1)
                 }
                 Spacer()
-                Image(systemName: model.contains(app.bundleId, in: folderID) ? "checkmark.circle.fill" : "plus.circle")
+                Image(systemName: model.contains(app.key, in: folderID) ? "checkmark.circle.fill" : "plus.circle")
                     .font(.title3)
                     .foregroundStyle(Theme.cognac)
             }
@@ -75,7 +76,7 @@ struct StoreSearchList: View {
     /// Apps already in any folder, once each, for quick re-adding.
     private var known: [AppRef] {
         var seen = Set<String>()
-        return model.library.folders.flatMap(\.apps).filter { seen.insert($0.bundleId).inserted }
+        return model.library.folders.flatMap(\.apps).filter { seen.insert($0.key).inserted }
     }
 
     var body: some View {
@@ -97,7 +98,8 @@ struct StoreSearchList: View {
                 if query.isEmpty && !known.isEmpty {
                     Section {
                         ForEach(known) { app in
-                            PickRow(app: app, subtitle: app.bundleId, folderID: folderID)
+                            PickRow(app: app, subtitle: app.inLiveContainer ? "In LiveContainer" : app.bundleId,
+                                    folderID: folderID)
                         }
                     } header: {
                         Text("Apps in your folders").foregroundStyle(Theme.embossSoft)
@@ -221,6 +223,122 @@ struct AppleAppsList: View {
                 .listRowBackground(Theme.pocket)
         }
         .walletList()
+    }
+}
+
+/// The Custom tab: an installed app by bundle ID, or an app that lives inside LiveContainer.
+struct CustomSourceView: View {
+    enum Kind: String, CaseIterable {
+        case bundle = "Bundle ID"
+        case liveContainer = "LiveContainer app"
+    }
+
+    let folderID: UUID
+    @State private var kind = Kind.bundle
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Kind", selection: $kind) {
+                ForEach(Kind.allCases, id: \.self) { Text($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            switch kind {
+            case .bundle: CustomAppForm(folderID: folderID)
+            case .liveContainer: LiveContainerForm(folderID: folderID)
+            }
+        }
+    }
+}
+
+/// An app inside LiveContainer. iOS doesn't list those as installed, so it opens by the launch link
+/// LiveContainer gives it (touch and hold the app → Add to Home Screen → Copy Launch URL).
+/// The link's format isn't assumed: any URL is accepted, and the form says whether it opens LiveContainer.
+struct LiveContainerForm: View {
+    let folderID: UUID
+    @EnvironmentObject private var model: LibraryModel
+    @State private var name = ""
+    @State private var link = ""
+    @State private var testResult: String?
+    @State private var added: AppRef?   // opens the icon editor right after adding
+
+    private var url: URL? {
+        let text = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: text), let scheme = url.scheme, !scheme.isEmpty else { return nil }
+        return url
+    }
+
+    /// LiveContainer registers livecontainer://, and a second or third copy livecontainer2:// and so on.
+    private var opensLiveContainer: Bool { url?.scheme?.lowercased().hasPrefix("livecontainer") == true }
+
+    private var check: (text: String, ok: Bool)? {
+        guard !link.isEmpty else { return nil }
+        guard let url else { return ("That isn't a link. Paste the whole launch URL.", false) }
+        let scheme = url.scheme ?? ""
+        guard opensLiveContainer else {
+            return ("This link opens \(scheme)://, not LiveContainer. It can still be added.", false)
+        }
+        // canOpenURL only answers for schemes listed in Info.plist; others come back false
+        if UIApplication.shared.canOpenURL(url) { return ("Opens LiveContainer.", true) }
+        return ("No app answers \(scheme):// here. Is LiveContainer installed? Try Test open.", false)
+    }
+
+    var body: some View {
+        Form {
+            Group {
+                Section {
+                    TextField("Name", text: $name)
+                    TextField("Launch URL", text: $link, axis: .vertical)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                    if let check {
+                        Label(check.text, systemImage: check.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(check.ok ? Theme.cognac : Theme.embossSoft)
+                    }
+                    Button("Paste") {
+                        if let text = UIPasteboard.general.string { link = text }
+                    }
+                    Button("Test open") {
+                        guard let url else { return }
+                        Task {
+                            testResult = await UIApplication.shared.open(url)
+                                ? nil
+                                : "Nothing opened. Copy the launch URL from LiveContainer again."
+                        }
+                    }
+                    .disabled(url == nil)
+                    if let testResult {
+                        Text(testResult).font(.footnote).foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("LiveContainer app")
+                } footer: {
+                    Text("In LiveContainer, touch and hold the app, then Add to Home Screen → Copy Launch URL. If the app has several containers, pick the container first.")
+                }
+
+                Section {
+                    Button("Add and choose icon") {
+                        guard let url else { return }
+                        let app = AppRef(id: UUID(), name: name.isEmpty ? "App" : name, bundleId: "",
+                                         icon: .letter(colorHex: Palette.folderColors[0]), launchURL: url)
+                        model.toggle(app, in: folderID)
+                        added = app
+                        name = ""
+                        link = ""
+                        testResult = nil
+                    }
+                    .disabled(url == nil || model.contains(url?.absoluteString ?? "", in: folderID))
+                } footer: {
+                    Text("Next, pick its icon: App Store, Photo, Letter or Symbol.")
+                }
+            }
+            .listRowBackground(Theme.pocket)
+        }
+        .walletList()
+        .sheet(item: $added) { IconEditor(folderID: folderID, app: $0) }
     }
 }
 

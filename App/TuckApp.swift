@@ -15,13 +15,24 @@ struct TuckApp: App {
         }
     }
 
-    /// tuck://bundle?id=<bundleId>: fallback route that opens an app through Tuck.
+    /// Fallback routes that open an app through Tuck: tuck://bundle?id=<bundleId> and
+    /// tuck://open?url=<link> (how the widget opens LiveContainer links by default).
     private func handle(_ url: URL) {
-        guard url.host == "bundle",
-              let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                  .queryItems?.first(where: { $0.name == "id" })?.value
-        else { return }
-        PrivateApps.openBundle(id)
+        let value = { (name: String) in
+            URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == name }?.value
+        }
+        switch url.host {
+        case "bundle":
+            if let id = value("id") { PrivateApps.openBundle(id) }
+        case "open":
+            guard let link = value("url").flatMap(URL.init(string:)) else { return }
+            Task {
+                let opened = await UIApplication.shared.open(link)
+                WidgetLog.write("through Tuck \(link.scheme ?? "?"): \(opened ? "opened" : "FAILED")")
+            }
+        default:
+            break
+        }
     }
 }
 
@@ -66,14 +77,19 @@ final class LibraryModel: ObservableObject {
         change { $0.folders.removeAll { $0.id == id } }
     }
 
-    func contains(_ bundleId: String, in id: UUID) -> Bool {
-        folder(id)?.apps.contains { $0.bundleId == bundleId } ?? false
+    /// Whether the folder has this app (`AppRef.key`: the bundle ID, or a LiveContainer launch link).
+    func contains(_ key: String, in id: UUID) -> Bool {
+        folder(id)?.apps.contains { $0.key == key } ?? false
+    }
+
+    func setLinkLaunch(_ launch: LinkLaunch) {
+        change { $0.linkLaunch = launch }
     }
 
     /// Adds the app, or removes it if the folder already has it.
     func toggle(_ app: AppRef, in id: UUID) {
         modify(id) { folder in
-            if let i = folder.apps.firstIndex(where: { $0.bundleId == app.bundleId }) {
+            if let i = folder.apps.firstIndex(where: { $0.key == app.key }) {
                 folder.apps.remove(at: i)
             } else if folder.apps.count < Folder.maxApps {
                 folder.apps.append(app)

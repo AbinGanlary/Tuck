@@ -2,6 +2,17 @@ import Foundation
 
 struct Library: Codable {
     var folders: [Folder] = []
+    var linkLaunch: LinkLaunch?     // how the widget opens LiveContainer links; nil = the default
+
+    var effectiveLinkLaunch: LinkLaunch { linkLaunch ?? .bounce }
+}
+
+/// Ways a widget tap can open a link. Bounce is the one proven on the phone (row C of the launch
+/// test); the other two are there to try with LiveContainer links.
+enum LinkLaunch: String, Codable, CaseIterable {
+    case bounce = "Through Tuck"    // Link to tuck://open, Tuck opens the link (brief flash)
+    case direct = "Direct"          // intent in the widget process, private LSApplicationWorkspace openURL
+    case openURLIntent = "OpenURLIntent"
 }
 
 struct Folder: Codable, Identifiable, Hashable {
@@ -17,7 +28,7 @@ struct Folder: Codable, Identifiable, Hashable {
     var iconScale: Double?          // share of the largest icon that fits the grid
     var iconSpacing: Double?        // points between icons (the edge gap follows it)
     var widgetShape: WidgetShape?   // the one size the widget gallery offers; nil = Auto (by app count)
-    var backgroundPhoto: UUID?      // JPEG in keychain "photo-<id>", drawn instead of the colour
+    var backgroundPhoto: UUID?      // JPEG "photo-<id>" in SharedBlobs, drawn instead of the colour
     var backgroundDim: Double?      // black over the photo so icons stand out
 
     static let defaultIconScale = 1.0
@@ -42,13 +53,20 @@ enum IconStyle: String, Codable, CaseIterable {
 struct AppRef: Codable, Identifiable, Hashable {
     var id: UUID
     var name: String
-    var bundleId: String
+    var bundleId: String            // empty for a LiveContainer app
     var icon: IconSource
+    // An app inside LiveContainer: iOS doesn't see it as installed, so it opens by this launch link
+    // instead of by bundle ID. Optional so items saved before it existed still decode.
+    var launchURL: URL?
+
+    var inLiveContainer: Bool { launchURL != nil }
+    /// What makes two items the same app: the launch link, else the bundle ID.
+    var key: String { launchURL?.absoluteString ?? bundleId }
 }
 
 enum IconSource: Codable, Hashable {
     case artwork(URL)                           // App Store artwork, or any image URL
-    case photo(UUID)                            // picked from Photos; JPEG in keychain "photo-<id>"
+    case photo(UUID)                            // picked from Photos; JPEG "photo-<id>" in SharedBlobs
     case system                                 // Home Screen icon via private API (Apple's apps)
     case symbol(name: String, colorHex: String)
     case letter(colorHex: String)

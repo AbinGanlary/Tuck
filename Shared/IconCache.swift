@@ -2,7 +2,7 @@ import Security
 import UIKit
 
 /// Icon images. The app downloads App Store artwork, keeps a file cache for its own screens and
-/// shares a small JPEG of each icon with the widget through the keychain. The widget never touches
+/// shares a small JPEG of each icon with the widget through SharedBlobs. The widget never touches
 /// the network: widgets get little memory and time, and downloading there left it stuck loading.
 enum IconCache {
     // pixels: sharp up to a small widget's ~64 pt icons at 3×, yet 49 of them (plus dark copies)
@@ -27,20 +27,20 @@ enum IconCache {
     /// For the widget: only the copies the app has already shared.
     static func sharedImage(for app: AppRef) -> UIImage? {
         switch app.icon {
-        case .artwork(let url): return SharedKeychain.read(account: sharedAccount(url)).flatMap(UIImage.init(data:))
+        case .artwork(let url): return SharedBlobs.read(account: sharedAccount(url)).flatMap(UIImage.init(data:))
         case .photo(let id): return photo(id)
         case .system: return PrivateApps.icon(app.bundleId)
         case .symbol, .letter: return nil
         }
     }
 
-    // MARK: Photos: icons (square 180 px) and widget backgrounds (up to 900 px), JPEGs in the shared keychain
+    // MARK: Photos: icons (square 180 px) and widget backgrounds (up to 900 px), JPEGs in SharedBlobs
 
     private static let photos = NSCache<NSUUID, UIImage>() // a photo never changes under its id
 
     static func photo(_ id: UUID) -> UIImage? {
         if let cached = photos.object(forKey: id as NSUUID) { return cached }
-        guard let image = SharedKeychain.read(account: "photo-\(id.uuidString)").flatMap(UIImage.init(data:))
+        guard let image = SharedBlobs.read(account: "photo-\(id.uuidString)").flatMap(UIImage.init(data:))
         else { return nil }
         photos.setObject(image, forKey: id as NSUUID)
         return image
@@ -59,7 +59,7 @@ enum IconCache {
             image.draw(in: CGRect(origin: .zero, size: size))
         }
         let id = UUID()
-        return SharedKeychain.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
+        return SharedBlobs.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
     }
 
     /// Crops the picked picture to its centre square, shrinks it and saves it. nil if it isn't an image.
@@ -77,7 +77,7 @@ enum IconCache {
                                       width: image.size.width * scale, height: image.size.height * scale))
             }
         let id = UUID()
-        return SharedKeychain.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
+        return SharedBlobs.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
     }
 
     /// Makes sure every artwork icon has a shared copy. true when it added any.
@@ -86,9 +86,9 @@ enum IconCache {
         for app in apps {
             guard case .artwork(let url) = app.icon else { continue }
             let account = sharedAccount(url)
-            guard SharedKeychain.read(account: account) == nil,
+            guard SharedBlobs.read(account: account) == nil,
                   let jpeg = await fetch(url)?.jpegData(compressionQuality: 0.85) else { continue }
-            if SharedKeychain.write(jpeg, account: account) == errSecSuccess { added = true }
+            if SharedBlobs.write(jpeg, account: account) == errSecSuccess { added = true }
         }
         return added
     }
@@ -130,10 +130,10 @@ enum WidgetLog {
     static func write(_ line: String) -> OSStatus {
         let stamped = "\(Date().formatted(date: .omitted, time: .standard))  \(line)"
         let lines = [stamped] + read().split(separator: "\n").prefix(7).map(String.init)
-        return SharedKeychain.write(Data(lines.joined(separator: "\n").utf8), account: account)
+        return SharedBlobs.write(Data(lines.joined(separator: "\n").utf8), account: account)
     }
 
     static func read() -> String {
-        SharedKeychain.read(account: account).flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        SharedBlobs.read(account: account).flatMap { String(data: $0, encoding: .utf8) } ?? ""
     }
 }

@@ -30,7 +30,7 @@ targets:
           - CFBundleURLName: com.abin.tuck
             CFBundleURLSchemes: [tuck]
         # canOpenURL only answers for schemes listed here (iOS caps the list at 50)
-        LSApplicationQueriesSchemes: [whatsapp, youtube, instagram]
+        LSApplicationQueriesSchemes: [whatsapp, youtube, instagram, livecontainer, livecontainer2, livecontainer3]
     entitlements:
       path: App/Tuck.entitlements
       properties:

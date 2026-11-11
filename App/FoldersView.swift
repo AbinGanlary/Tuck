@@ -284,6 +284,7 @@ struct LoadedIcon: View {
 
 struct DiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var model: LibraryModel
     @State private var widgetLog = WidgetLog.read()
     @AppStorage(AppStore.countryKey) private var storeCountry = ""
 
@@ -305,6 +306,16 @@ struct DiagnosticsView: View {
                     }
                     Section("Storage") {
                         LabeledContent("Folders saved in", value: Store.mode)
+                    }
+                    Section {
+                        Picker("Open with", selection: Binding(get: { model.library.effectiveLinkLaunch },
+                                                               set: { model.setLinkLaunch($0) })) {
+                            ForEach(LinkLaunch.allCases, id: \.self) { Text($0.rawValue) }
+                        }
+                    } header: {
+                        Text("LiveContainer apps on the widget")
+                    } footer: {
+                        Text("Through Tuck opens Tuck for a moment, then the app. Direct and OpenURLIntent try to skip Tuck; if a tap does nothing, switch back.")
                     }
                     Section {
                         Text(widgetLog.isEmpty ? "The widget hasn't run yet." : widgetLog)

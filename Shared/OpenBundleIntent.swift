@@ -20,3 +20,36 @@ struct OpenBundleIntent: AppIntent {
         return .result()
     }
 }
+
+/// The "Direct" way to open a LiveContainer link: like row E, from the widget's own process.
+struct OpenLinkIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open link"
+    static var isDiscoverable: Bool = false
+
+    @Parameter(title: "Link")
+    var url: URL
+
+    init() {}
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    func perform() async throws -> some IntentResult {
+        let opened = PrivateApps.openURL(url)
+        WidgetLog.write("direct \(url.scheme ?? "?"): \(opened ? "opened" : "FAILED")")
+        return .result()
+    }
+}
+
+extension AppRef {
+    /// tuck://open?url=<launch link>: the bounce route, where Tuck opens the link itself.
+    var bounceURL: URL? {
+        guard let launchURL else { return nil }
+        var c = URLComponents()
+        c.scheme = "tuck"
+        c.host = "open"
+        c.queryItems = [URLQueryItem(name: "url", value: launchURL.absoluteString)]
+        return c.url
+    }
+}

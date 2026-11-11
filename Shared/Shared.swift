@@ -2,9 +2,12 @@ import Foundation
 import SwiftUI
 
 enum Shared {
-    static let appGroup = "group.com.abin.tuck"
+    /// The App Group as signed. Signers can rename it (SideStore and AltStore add the team ID, e.g.
+    /// group.com.abin.tuck.ABCDE12345), so it's read from the entitlements rather than assumed.
+    static let appGroup: String = Entitlements.appGroups.first { $0.hasPrefix("group.com.abin.tuck") }
+        ?? "group.com.abin.tuck"
 
-    /// nil when signing didn't grant the App Group (the user's certificate doesn't).
+    /// nil when signing didn't grant the App Group; everything shared then goes through the keychain.
     static var container: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
     }

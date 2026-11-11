@@ -97,7 +97,13 @@ struct FolderDetailView: View {
             get: { selected != nil }, set: { if !$0 { selected = nil } }), titleVisibility: .visible
         ) {
             if let app = selected {
-                Button("Open") { PrivateApps.openBundle(app.bundleId) }
+                Button("Open") {
+                    if let url = app.launchURL {
+                        UIApplication.shared.open(url)
+                    } else {
+                        PrivateApps.openBundle(app.bundleId)
+                    }
+                }
                 Button("Change icon") { iconEditing = app }
                 Button("Remove from folder", role: .destructive) {
                     model.modify(folderID) { $0.apps.removeAll { $0.id == app.id } }
@@ -179,6 +185,18 @@ struct FolderDetailView: View {
 
     private func draggableIcon(_ app: AppRef, size: CGFloat, dark: Bool) -> some View {
         LoadedIcon(app: app, size: size, dark: dark)
+            .overlay(alignment: .bottomTrailing) {
+                // editor only, never on the widget: marks apps that open inside LiveContainer
+                if app.inLiveContainer {
+                    Image(systemName: "shippingbox.fill")
+                        .font(.system(size: max(9, size * 0.2), weight: .bold))
+                        .foregroundStyle(Theme.ground)
+                        .padding(max(3, size * 0.06))
+                        .background(Circle().fill(Theme.cognac))
+                        .offset(x: size * 0.08, y: size * 0.08)
+                        .accessibilityLabel("LiveContainer")
+                }
+            }
             .opacity(dragging?.id == app.id ? 0.4 : 1)
             .onTapGesture { selected = app }
             .onDrag {

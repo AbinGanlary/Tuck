@@ -17,6 +17,24 @@ enum PrivateApps {
         return fn(ws, sel, bundleId as NSString)
     }
 
+    /// Opens a link (any scheme) through LaunchServices, from whichever process calls it.
+    /// false when the API is missing or nothing opened it.
+    @discardableResult
+    static func openURL(_ url: URL) -> Bool {
+        guard let ws = workspace else { return false }
+        let sensitive = NSSelectorFromString("openSensitiveURL:withOptions:")
+        if ws.responds(to: sensitive) {
+            typealias Fn = @convention(c) (AnyObject, Selector, NSURL, NSDictionary?) -> Bool
+            let fn = unsafeBitCast(ws.method(for: sensitive), to: Fn.self)
+            if fn(ws, sensitive, url as NSURL, nil) { return true }
+        }
+        let plain = NSSelectorFromString("openURL:")
+        guard ws.responds(to: plain) else { return false }
+        typealias Fn = @convention(c) (AnyObject, Selector, NSURL) -> Bool
+        let fn = unsafeBitCast(ws.method(for: plain), to: Fn.self)
+        return fn(ws, plain, url as NSURL)
+    }
+
     /// Whether an app is installed, without opening it. nil when this iOS hides the call.
     static func isInstalled(_ bundleId: String) -> Bool? {
         typealias Fn = @convention(c) (AnyObject, Selector, NSString) -> Bool

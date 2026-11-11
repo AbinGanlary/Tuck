@@ -8,7 +8,7 @@ Tuck puts folders of apps on your iPhone Home Screen as widgets. Tap an icon in 
 - **One-tap launch.** Apps open by bundle ID straight from the widget.
 - **Real icons.** Original App Store icons, Apple's own apps from the phone, or pick your own.
 - **Your own look.** A colour or a background photo per folder, and dark icons for dark mode.
-- **Sideloaded apps work too.** Anything installed on the phone can go in a folder.
+- **Sideloaded apps work too.** Anything installed on the phone can go in a folder, and apps inside [LiveContainer](https://github.com/LiveContainer/LiveContainer) open by their launch link.
 - **No ads, nothing to buy.**
 
 The app itself is where you shape the folders: drag apps into order, set icon size and spacing, and preview each widget exactly as it will look on the Home Screen.

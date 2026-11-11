@@ -14,6 +14,7 @@ struct FolderEntry: TimelineEntry {
     let slot: Int
     let folder: Folder?
     let icons: [UUID: UIImage]
+    var linkLaunch = LinkLaunch.bounce
 }
 
 struct FolderProvider: TimelineProvider {
@@ -33,7 +34,8 @@ struct FolderProvider: TimelineProvider {
     }
 
     private func entry() -> FolderEntry {
-        let folders = Store.load().folders
+        let library = Store.load()
+        let folders = library.folders
         guard folders.indices.contains(slot) else {
             WidgetLog.write("widget \(slot + 1): no folder \(slot + 1) (\(folders.count) folders)")
             return FolderEntry(date: Date(), slot: slot, folder: nil, icons: [:])
@@ -43,8 +45,9 @@ struct FolderProvider: TimelineProvider {
         for app in folder.apps {
             icons[app.id] = IconCache.sharedImage(for: app)
         }
-        WidgetLog.write("widget \(slot + 1): \(folder.name), \(icons.count) of \(folder.apps.count) icons")
-        return FolderEntry(date: Date(), slot: slot, folder: folder, icons: icons)
+        WidgetLog.write("widget \(slot + 1): \(folder.name), \(icons.count) of \(folder.apps.count) icons, \(Store.mode)")
+        return FolderEntry(date: Date(), slot: slot, folder: folder, icons: icons,
+                           linkLaunch: library.effectiveLinkLaunch)
     }
 }
 
@@ -86,12 +89,21 @@ struct FolderWidgetView: View {
     private func slot(_ folder: Folder, index: Int, icon: CGFloat) -> some View {
         if index < folder.apps.count {
             let app = folder.apps[index]
-            Button(intent: OpenBundleIntent(bundleId: app.bundleId)) {
-                AppIconView(app: app, image: entry.icons[app.id], size: icon, dark: folder.usesDarkIcons(scheme))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
+            let tile = AppIconView(app: app, image: entry.icons[app.id], size: icon, dark: folder.usesDarkIcons(scheme))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            if let url = app.launchURL {
+                switch entry.linkLaunch {
+                case .bounce:
+                    Link(destination: app.bounceURL ?? url) { tile }
+                case .direct:
+                    Button(intent: OpenLinkIntent(url: url)) { tile }.buttonStyle(.plain)
+                case .openURLIntent:
+                    Button(intent: OpenURLIntent(url)) { tile }.buttonStyle(.plain)
+                }
+            } else {
+                Button(intent: OpenBundleIntent(bundleId: app.bundleId)) { tile }.buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         } else {
             Color.clear
         }
