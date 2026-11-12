@@ -73,7 +73,13 @@ struct FolderWidgetView: View {
                     slot(folder, index: index, icon: icon)
                 }
             } else {
-                Text("Make folder \(entry.slot + 1) in Tuck").font(.caption).multilineTextAlignment(.center)
+                VStack(spacing: 4) {
+                    Text("Make folder \(entry.slot + 1) in Tuck").font(.caption)
+                    // if the app already has folders, this shows where the widget looked
+                    Text("Looking in: \(Store.mode)").font(.caption2).foregroundStyle(.secondary)
+                }
+                .multilineTextAlignment(.center)
+                .padding(8)
             }
         }
         .containerBackground(for: .widget) {
@@ -124,7 +130,10 @@ private func folderWidget(slot: Int) -> some WidgetConfiguration {
     case .small: families = [.systemSmall]
     case .medium: families = [.systemMedium]
     case .large: families = [.systemLarge]
-    case nil: families = [] // no folder in this slot: hide it
+    // No folder in this slot: hide it. But when the widget reads no folders at all (none made yet,
+    // or signing didn't let it see the app's storage), keep Folder 1 so Tuck stays in the gallery
+    // and the widget can say what it sees.
+    case nil: families = slot == 0 && folders.isEmpty ? [.systemSmall, .systemMedium, .systemLarge] : []
     }
     return StaticConfiguration(kind: "TuckFolder\(slot + 1)", provider: FolderProvider(slot: slot)) { entry in
         FolderWidgetView(entry: entry)

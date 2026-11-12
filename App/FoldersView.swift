@@ -330,6 +330,10 @@ struct DiagnosticsView: View {
                         Text("Newest first. If a widget stays grey, send a screenshot of this.")
                     }
                     Section("Signing") {
+                        // signers can drop app extensions (free accounts have few App IDs)
+                        LabeledContent("Widget extension", value: Bundle.main.builtInPlugInsURL.map {
+                            FileManager.default.fileExists(atPath: $0.appendingPathComponent("TuckWidget.appex").path)
+                        } == true ? "installed" : "MISSING")
                         LabeledContent("Team", value: Entitlements.teamID ?? "?")
                         LabeledContent("App Groups", value: Entitlements.appGroups.isEmpty ? "none" : Entitlements.appGroups.joined(separator: "\n"))
                         LabeledContent("Keychain", value: Entitlements.keychainGroups.isEmpty ? "none" : Entitlements.keychainGroups.joined(separator: "\n"))
