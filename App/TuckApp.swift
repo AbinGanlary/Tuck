@@ -16,7 +16,8 @@ struct TuckApp: App {
     }
 
     /// Fallback routes that open an app through Tuck: tuck://bundle?id=<bundleId> and
-    /// tuck://open?url=<link> (how the widget opens LiveContainer links by default).
+    /// tuck://open?id=<item id> (how the widget opens LiveContainer links by default; older widgets
+    /// may still send ?url=<link>).
     private func handle(_ url: URL) {
         let value = { (name: String) in
             URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == name }?.value
@@ -25,14 +26,31 @@ struct TuckApp: App {
         case "bundle":
             if let id = value("id") { PrivateApps.openBundle(id) }
         case "open":
-            guard let link = value("url").flatMap(URL.init(string:)) else { return }
-            Task {
-                let opened = await UIApplication.shared.open(link)
-                WidgetLog.write("through Tuck \(link.scheme ?? "?"): \(opened ? "opened" : "FAILED")")
+            let item = value("id").flatMap(UUID.init(uuidString:)).flatMap { id in
+                model.library.folders.flatMap(\.apps).first { $0.id == id }
             }
+            guard let link = item?.launchURL ?? value("url").flatMap(URL.init(string:)) else {
+                WidgetLog.write("through Tuck: no link for \(url.absoluteString)")
+                return
+            }
+            Task { await openWhenActive(link) }
         default:
             break
         }
+    }
+
+    /// Opening another app while Tuck is still coming to the front can quietly fail, so wait
+    /// until it's active (up to 2 s) and try once more if the first open doesn't take.
+    private func openWhenActive(_ link: URL) async {
+        for _ in 0..<20 where UIApplication.shared.applicationState != .active {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        var opened = await UIApplication.shared.open(link)
+        if !opened {
+            try? await Task.sleep(for: .milliseconds(500))
+            opened = await UIApplication.shared.open(link)
+        }
+        WidgetLog.write("through Tuck \(link.scheme ?? "?"): \(opened ? "opened" : "FAILED")")
     }
 }
 

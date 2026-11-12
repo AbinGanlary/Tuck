@@ -43,13 +43,10 @@ struct OpenLinkIntent: AppIntent {
 }
 
 extension AppRef {
-    /// tuck://open?url=<launch link>: the bounce route, where Tuck opens the link itself.
+    /// tuck://open?id=<item id>: the bounce route, where Tuck looks the launch link up and opens it.
+    /// Only the id travels: a launch link carries its own ?…&… query, which nesting can mangle.
     var bounceURL: URL? {
-        guard let launchURL else { return nil }
-        var c = URLComponents()
-        c.scheme = "tuck"
-        c.host = "open"
-        c.queryItems = [URLQueryItem(name: "url", value: launchURL.absoluteString)]
-        return c.url
+        guard launchURL != nil else { return nil }
+        return URL(string: "tuck://open?id=\(id.uuidString)")
     }
 }
