@@ -38,9 +38,11 @@ enum IconCache {
 
     private static let photos = NSCache<NSUUID, UIImage>() // a photo never changes under its id
 
+    static func photoAccount(_ id: UUID) -> String { "photo-\(id.uuidString)" }
+
     static func photo(_ id: UUID) -> UIImage? {
         if let cached = photos.object(forKey: id as NSUUID) { return cached }
-        guard let image = SharedBlobs.read(account: "photo-\(id.uuidString)").flatMap(UIImage.init(data:))
+        guard let image = SharedBlobs.read(account: photoAccount(id)).flatMap(UIImage.init(data:))
         else { return nil }
         photos.setObject(image, forKey: id as NSUUID)
         return image
@@ -59,7 +61,7 @@ enum IconCache {
             image.draw(in: CGRect(origin: .zero, size: size))
         }
         let id = UUID()
-        return SharedBlobs.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
+        return SharedBlobs.write(jpeg, account: photoAccount(id)) == errSecSuccess ? id : nil
     }
 
     /// Crops the picked picture to its centre square, shrinks it and saves it. nil if it isn't an image.
@@ -77,7 +79,7 @@ enum IconCache {
                                       width: image.size.width * scale, height: image.size.height * scale))
             }
         let id = UUID()
-        return SharedBlobs.write(jpeg, account: "photo-\(id.uuidString)") == errSecSuccess ? id : nil
+        return SharedBlobs.write(jpeg, account: photoAccount(id)) == errSecSuccess ? id : nil
     }
 
     /// Makes sure every artwork icon has a shared copy. true when it added any.

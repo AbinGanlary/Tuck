@@ -100,6 +100,14 @@ final class LibraryModel: ObservableObject {
         folder(id)?.apps.contains { $0.key == key } ?? false
     }
 
+    /// Replaces every folder with the backup's, photos first so the widgets find them.
+    /// Returns how many photos couldn't be saved.
+    func restore(_ backup: Backup) -> Int {
+        let failed = backup.restorePhotos()
+        change { $0 = backup.library }
+        return failed
+    }
+
     func setLinkLaunch(_ launch: LinkLaunch) {
         change { $0.linkLaunch = launch }
     }

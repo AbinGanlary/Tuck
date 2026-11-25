@@ -304,6 +304,7 @@ struct DiagnosticsView: View {
                     } footer: {
                         Text("Searching uses the \(AppStore.country.uppercased()) store, then the US store if nothing is found. Leave empty to follow your iPhone's region.")
                     }
+                    BackupSection()
                     Section("Storage") {
                         LabeledContent("Folders saved in", value: Store.mode)
                     }
