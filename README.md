@@ -31,6 +31,14 @@ Requires iOS 18 or later.
 
 ## Install
 
+**SideStore or AltStore:** add this source, then install Tuck from it. Keep app extensions when asked, or there is no widget.
+
+```
+https://raw.githubusercontent.com/AbinGanlary/Tuck/main/altstore/source.json
+```
+
+Or by hand:
+
 1. Download `Tuck-x.y.z.ipa` from [Releases](../../releases).
 2. Sign and install it with a sideloading tool such as [Sideloadly](https://sideloadly.io) or [AltStore](https://altstore.io), using your own Apple ID or certificate.
 3. Open Tuck, make a folder and add apps.

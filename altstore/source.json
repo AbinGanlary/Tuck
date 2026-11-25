@@ -1,0 +1,65 @@
+{
+  "name": "Tuck",
+  "identifier": "com.abin.tuck.source",
+  "subtitle": "Folders of apps as Home Screen widgets",
+  "description": "Source for Tuck. Unsigned builds are re-signed on your phone by AltStore or SideStore. Keep app extensions when installing, or there is no widget.",
+  "iconURL": "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/branding/icon-tuck-1024.png",
+  "website": "https://github.com/AbinGanlary/Tuck",
+  "tintColor": "#115253",
+  "apps": [
+    {
+      "name": "Tuck",
+      "bundleIdentifier": "com.abin.tuck",
+      "developerName": "AbinGanlary",
+      "subtitle": "One-tap app folders on your Home Screen",
+      "localizedDescription": "Tuck puts folders of apps on your Home Screen as widgets. Tap an icon and the app opens straight away, opened by bundle ID, so sideloaded apps and apps inside LiveContainer work too. Up to six folders in Small, Medium or Large widgets, original App Store icons, dark icons, a colour or background photo per folder, drag to arrange, and backup and restore. No ads, nothing to buy. Uses private iOS APIs, so it can only be sideloaded.",
+      "iconURL": "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/branding/icon-tuck-1024.png",
+      "tintColor": "#115253",
+      "screenshotURLs": [
+        "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/screenshots/folders.png",
+        "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/screenshots/folder-editor.png",
+        "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/screenshots/add-apps.png",
+        "https://raw.githubusercontent.com/AbinGanlary/Tuck/main/screenshots/folder-style.png"
+      ],
+      "versions": [
+        {
+          "version": "1.2.0",
+          "buildVersion": "8",
+          "date": "2026-11-25",
+          "localizedDescription": "Backup and restore in About Tuck. Apps inside LiveContainer open by their launch URL. Works with App Groups renamed by SideStore and AltStore. Folder 1 always shows in Add Widget.",
+          "downloadURL": "https://github.com/AbinGanlary/Tuck/releases/download/v1.2.0/Tuck-1.2.0.ipa",
+          "size": 447052,
+          "sha256": "9b7de52d73a808105088e3f4ab3b30693c9cc1209f70c6ca144e1f3370da3d3a",
+          "minOSVersion": "18.0"
+        },
+        {
+          "version": "1.1.0",
+          "buildVersion": "4",
+          "date": "2026-11-02",
+          "localizedDescription": "Background photo per folder with dimming, brighter dark icons, sharper widget icons.",
+          "downloadURL": "https://github.com/AbinGanlary/Tuck/releases/download/v1.1.0/Tuck-1.1.0.ipa",
+          "size": 379775,
+          "sha256": "24ae52a6b3f807093cddb47c792860517805e24c2e51ea3e5f6ca0479964856f",
+          "minOSVersion": "18.0"
+        },
+        {
+          "version": "1.0.0",
+          "buildVersion": "2",
+          "date": "2026-10-30",
+          "localizedDescription": "First release.",
+          "downloadURL": "https://github.com/AbinGanlary/Tuck/releases/download/v1.0.0/Tuck-1.0.0.ipa",
+          "size": 356816,
+          "sha256": "61059fe6f331b2c1f9c6cd6f2a6bcd5e8b4bcd1b2e38754817a788f18adb5fda",
+          "minOSVersion": "18.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [
+          "com.apple.security.application-groups"
+        ],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
